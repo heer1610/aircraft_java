@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AeroManage – Airlines</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg-base:#070d1f; --bg-card:#0c1530; --border:rgba(255,255,255,0.07);
+      --accent:#4080ff; --accent2:#00c8ff; --success:#00d46a;
+      --warning:#ffb800; --danger:#ff4d4d; --text:#fff;
+      --text-muted:rgba(255,255,255,0.45); --sidebar-w:240px;
+    }
+    body { font-family:'Inter',sans-serif; background:var(--bg-base); color:var(--text); display:flex; min-height:100vh; }
+    /* sidebar */
+    .sidebar { width:var(--sidebar-w); flex-shrink:0; background:var(--bg-card); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100; }
+    .sidebar-logo { padding:24px 20px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .logo-icon { width:40px; height:40px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+    .logo-text { font-size:1.1rem; font-weight:700; } .logo-sub { font-size:.65rem; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; }
+    .sidebar-nav { flex:1; padding:16px 10px; }
+    .nav-label { font-size:.65rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); padding:12px 10px 6px; }
+    .nav-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--text-muted); font-size:.88rem; font-weight:500; text-decoration:none; cursor:pointer; transition:background .15s,color .15s; margin-bottom:2px; }
+    .nav-item:hover { background:rgba(255,255,255,.05); color:var(--text); }
+    .nav-item.active { background:rgba(64,128,255,.15); color:var(--accent); }
+    .nav-item i { width:18px; text-align:center; }
+    .sidebar-footer { padding:16px 10px; border-top:1px solid var(--border); }
+    .user-pill { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.04); }
+    .user-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0; }
+    .user-name { font-size:.82rem; font-weight:600; } .user-role { font-size:.68rem; color:var(--text-muted); }
+    .logout-btn { margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; } .logout-btn:hover { color:var(--danger); }
+    /* main */
+    .main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
+    .topbar { background:var(--bg-card); border-bottom:1px solid var(--border); padding:16px 32px; display:flex; align-items:center; gap:16px; }
+    .topbar h1 { font-size:1.2rem; font-weight:700; flex:1; }
+    .badge-role { padding:4px 12px; border-radius:20px; font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .badge-admin { background:rgba(255,64,64,.15); color:#ff6464; border:1px solid rgba(255,64,64,.3); }
+    .badge-technician { background:rgba(64,128,255,.15); color:#6496ff; border:1px solid rgba(64,128,255,.3); }
+    .badge-viewer { background:rgba(0,200,106,.12); color:var(--success); border:1px solid rgba(0,200,106,.3); }
+    .btn { padding:9px 18px; border-radius:10px; font-size:.85rem; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; border:none; display:inline-flex; align-items:center; gap:8px; transition:opacity .2s,transform .15s; }
+    .btn:hover { opacity:.88; transform:translateY(-1px); }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),#6040ff); color:#fff; box-shadow:0 4px 16px rgba(64,128,255,.35); }
+    .btn-danger  { background:rgba(255,77,77,.15); color:var(--danger); border:1px solid rgba(255,77,77,.3); }
+    .btn-edit    { background:rgba(64,128,255,.12); color:var(--accent); border:1px solid rgba(64,128,255,.25); }
+    .btn-info    { background:rgba(0,200,255,.1); color:var(--accent2); border:1px solid rgba(0,200,255,.25); }
+    .btn-sm { padding:6px 12px; font-size:.78rem; }
+    .content { padding:32px; flex:1; }
+    /* search */
+    .filter-bar { display:flex; gap:14px; margin-bottom:22px; }
+    .search-wrap { position:relative; flex:1; }
+    .search-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:.88rem; }
+    .search-input { width:100%; padding:10px 14px 10px 40px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.88rem; font-family:'Inter',sans-serif; outline:none; }
+    .search-input:focus { border-color:var(--accent); }
+    /* cards grid */
+    .airlines-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px; }
+    .airline-card {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
+      padding:24px; position:relative; overflow:hidden;
+      transition:border-color .2s, transform .15s, box-shadow .15s;
+    }
+    .airline-card:hover { border-color:rgba(64,128,255,.35); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,30,.4); }
+    .airline-card-top { display:flex; align-items:flex-start; gap:16px; margin-bottom:16px; }
+    .airline-logo {
+      width:52px; height:52px; border-radius:12px;
+      background:linear-gradient(135deg, rgba(64,128,255,.2), rgba(0,200,255,.15));
+      border:1px solid rgba(64,128,255,.2);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.3rem; font-weight:800; color:var(--accent2);
+      flex-shrink:0; letter-spacing:-1px;
+    }
+    .airline-info { flex:1; }
+    .airline-name { font-size:1rem; font-weight:700; margin-bottom:4px; }
+    .airline-iata { display:inline-block; padding:2px 8px; border-radius:6px; background:rgba(64,128,255,.15); color:var(--accent); font-size:.72rem; font-weight:700; letter-spacing:1px; }
+    .airline-country { font-size:.8rem; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:6px; }
+    .airline-desc { font-size:.82rem; color:var(--text-muted); line-height:1.6; margin-bottom:16px; min-height:42px; }
+    .airline-fleet { display:flex; align-items:center; gap:8px; font-size:.8rem; color:var(--text-muted); padding:10px 14px; background:rgba(255,255,255,.03); border-radius:10px; margin-bottom:16px; }
+    .airline-fleet strong { color:var(--text); }
+    .airline-actions { display:flex; gap:8px; }
+    .empty-state { padding:80px 24px; text-align:center; color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:16px; display:block; opacity:.2; }
+    /* modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--bg-card); border:1px solid var(--border); border-radius:20px; width:min(520px,100%); padding:36px; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+    .modal-title { font-size:1.1rem; font-weight:700; }
+    .modal-close { background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+    .modal-close:hover { color:var(--text); }
+    .form-group { margin-bottom:16px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    label { display:block; font-size:.75rem; font-weight:500; color:var(--text-muted); margin-bottom:7px; letter-spacing:.5px; text-transform:uppercase; }
+    .form-control { width:100%; padding:11px 14px; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.88rem; font-family:'Inter',sans-serif; outline:none; }
+    .form-control:focus { border-color:var(--accent); background:rgba(64,128,255,.06); }
+    textarea.form-control { resize:vertical; min-height:80px; }
+    .modal-footer { display:flex; gap:12px; justify-content:flex-end; margin-top:28px; padding-top:20px; border-top:1px solid var(--border); }
+    .alert { padding:11px 14px; border-radius:9px; font-size:.83rem; margin-bottom:16px; display:none; }
+    .alert.show { display:block; }
+    .alert-error { background:rgba(255,70,70,.12); border:1px solid rgba(255,70,70,.28); color:#ff7070; }
+    .spinner-sm { width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    /* fleet drawer */
+    .fleet-modal { width:min(700px,100%); }
+    .fleet-table { width:100%; border-collapse:collapse; margin-top:12px; }
+    .fleet-table th { font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.7px; color:var(--text-muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); }
+    .fleet-table td { padding:12px 14px; font-size:.84rem; border-bottom:1px solid rgba(255,255,255,.04); }
+    .fleet-table tr:last-child td { border-bottom:none; }
+    .status-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:20px; font-size:.7rem; font-weight:600; }
+    .status-badge::before { content:''; width:5px; height:5px; border-radius:50%; }
+    .status-ACTIVE      { background:rgba(0,212,106,.1);  color:var(--success); border:1px solid rgba(0,212,106,.25); }
+    .status-ACTIVE::before { background:var(--success); }
+    .status-MAINTENANCE { background:rgba(255,184,0,.1);  color:var(--warning); border:1px solid rgba(255,184,0,.25); }
+    .status-MAINTENANCE::before { background:var(--warning); }
+    .status-INACTIVE    { background:rgba(255,77,77,.1);  color:var(--danger);  border:1px solid rgba(255,77,77,.25); }
+    .status-INACTIVE::before { background:var(--danger); }
+  </style>
+</head>
+<body>
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><i class="fa-solid fa-plane" style="color:#fff"></i></div>
+    <div><div class="logo-text">AeroManage</div><div class="logo-sub">Fleet System</div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+    <a class="nav-item" href="/aircraft"><i class="fa-solid fa-plane-departure"></i> Aircraft</a>
+    <a class="nav-item" href="/maintenance"><i class="fa-solid fa-wrench"></i> Maintenance</a>
+    <a class="nav-item active" href="/airlines"><i class="fa-solid fa-building"></i> Airlines</a>
+    <div class="nav-label" style="margin-top:8px">Account</div>
+    <div class="nav-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="avatarInitial">?</div>
+      <div><div class="user-name" id="sidebarUsername">…</div><div class="user-role" id="sidebarRole"></div></div>
+      <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-building" style="color:var(--accent2);margin-right:10px"></i>Airlines</h1>
+    <span class="badge-role" id="roleBadge"></span>
+    <button class="btn btn-primary" id="addBtn" onclick="openModal()"><i class="fa-solid fa-plus"></i> Add Airline</button>
+  </div>
+  <div class="content">
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search airlines by name, IATA code, country…" oninput="renderCards()"/>
+      </div>
+    </div>
+    <div class="airlines-grid" id="airlinesGrid">
+      <div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-spinner fa-spin"></i>Loading airlines…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Airline Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Add Airline</span>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="alert alert-error" id="modalErr"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Airline Name *</label>
+        <input type="text" class="form-control" id="fName" placeholder="e.g. Air India"/>
+      </div>
+      <div class="form-group">
+        <label>IATA Code * (2–3 chars)</label>
+        <input type="text" class="form-control" id="fIata" placeholder="e.g. AI" maxlength="3"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Country</label>
+      <input type="text" class="form-control" id="fCountry" placeholder="e.g. India"/>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea class="form-control" id="fDesc" placeholder="Brief description of the airline…" rows="3"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()" style="background:rgba(255,255,255,.06);color:var(--text)">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveAirline()">
+        <span id="saveBtnLabel"><i class="fa-solid fa-floppy-disk"></i> Save</span>
+        <span id="saveBtnSpinner" class="spinner-sm" style="display:none"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Fleet View Modal -->
+<div class="modal-overlay" id="fleetOverlay">
+  <div class="modal fleet-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="fleetTitle">Fleet</span>
+      <button class="modal-close" onclick="closeFleet()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="fleetContent"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeFleet()" style="background:rgba(255,255,255,.06);color:var(--text)">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8080';
+  const token    = localStorage.getItem('token');
+  const roles    = JSON.parse(localStorage.getItem('roles') || '[]');
+  const username = localStorage.getItem('username') || 'User';
+  if (!token) { window.location.href = '/login'; }
+
+  document.getElementById('sidebarUsername').textContent = username;
+  document.getElementById('avatarInitial').textContent   = username.charAt(0).toUpperCase();
+  const primaryRole = roles.find(r=>r.includes('ADMIN')) || roles.find(r=>r.includes('TECHNICIAN')) || 'ROLE_VIEWER';
+  const roleLabel = primaryRole.replace('ROLE_','');
+  document.getElementById('sidebarRole').textContent = roleLabel;
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = roleLabel; badge.className = 'badge-role badge-'+roleLabel.toLowerCase();
+
+  const isAdmin = roles.some(r=>r.includes('ADMIN'));
+  if (!isAdmin) document.getElementById('addBtn').style.display = 'none';
+
+  const hdrs = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+  let allAirlines=[], editId=null;
+
+  async function loadAirlines() {
+    try {
+      const res = await fetch(`${API}/api/airlines`, { headers:hdrs });
+      if (res.status===401) { window.location.href='/login'; return; }
+      allAirlines = await res.json();
+      renderCards();
+    } catch(e) {
+      document.getElementById('airlinesGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-triangle-exclamation"></i>Failed to load airlines. Is the server running?</div>';
+    }
+  }
+
+  function renderCards() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allAirlines.filter(a =>
+      !q || a.name.toLowerCase().includes(q) || (a.iataCode||'').toLowerCase().includes(q) || (a.country||'').toLowerCase().includes(q)
+    );
+    const grid = document.getElementById('airlinesGrid');
+    if (!filtered.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-building"></i>No airlines found</div>';
+      return;
+    }
+    grid.innerHTML = filtered.map(a => `
+      <div class="airline-card">
+        <div class="airline-card-top">
+          <div class="airline-logo">${a.iataCode}</div>
+          <div class="airline-info">
+            <div class="airline-name">${a.name}</div>
+            <span class="airline-iata">${a.iataCode}</span>
+            ${a.country ? `<div class="airline-country"><i class="fa-solid fa-location-dot"></i>${a.country}</div>` : ''}
+          </div>
+        </div>
+        <div class="airline-desc">${a.description || '<em style="opacity:.5">No description provided</em>'}</div>
+        <div class="airline-fleet">
+          <i class="fa-solid fa-plane" style="color:var(--accent)"></i>
+          <span>Fleet: <strong id="fleet-${a.id}">loading…</strong></span>
+        </div>
+        <div class="airline-actions">
+          <button class="btn btn-info btn-sm" onclick="viewFleet(${a.id},'${escHtml(a.name)}')"><i class="fa-solid fa-eye"></i> Fleet</button>
+          ${isAdmin ? `
+          <button class="btn btn-edit btn-sm" onclick="openEdit(${a.id})"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAirline(${a.id},'${escHtml(a.name)}')"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
+      </div>`).join('');
+
+    // Load fleet counts
+    filtered.forEach(a => loadFleetCount(a.id));
+  }
+
+  function escHtml(s) { return s.replace(/'/g, "\\'"); }
+
+  async function loadFleetCount(airlineId) {
+    try {
+      const res = await fetch(`${API}/api/aircraft/airline/${airlineId}`, { headers:hdrs });
+      const data = await res.json();
+      const el = document.getElementById(`fleet-${airlineId}`);
+      if (el) el.textContent = data.length + ' aircraft';
+    } catch(e) {
+      const el = document.getElementById(`fleet-${airlineId}`);
+      if (el) el.textContent = '—';
+    }
+  }
+
+  async function viewFleet(airlineId, name) {
+    document.getElementById('fleetTitle').textContent = `Fleet – ${name}`;
+    document.getElementById('fleetContent').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>';
+    document.getElementById('fleetOverlay').classList.add('open');
+    try {
+      const res = await fetch(`${API}/api/aircraft/airline/${airlineId}`, { headers:hdrs });
+      const aircraft = await res.json();
+      if (!aircraft.length) {
+        document.getElementById('fleetContent').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)">No aircraft registered to this airline</div>';
+        return;
+      }
+      const rows = aircraft.map(a => `
+        <tr>
+          <td><strong style="color:var(--accent2)">${a.registrationNumber}</strong></td>
+          <td>${a.manufacturer}</td>
+          <td>${a.model}</td>
+          <td>${a.yearOfManufacture||'—'}</td>
+          <td><span class="status-badge status-${a.status}">${a.status}</span></td>
+        </tr>`).join('');
+      document.getElementById('fleetContent').innerHTML = `
+        <table class="fleet-table">
+          <thead><tr><th>Reg. No.</th><th>Manufacturer</th><th>Model</th><th>Year</th><th>Status</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    } catch(e) {
+      document.getElementById('fleetContent').innerHTML = '<div style="color:var(--danger);padding:20px">Failed to load fleet.</div>';
+    }
+  }
+
+  function closeFleet() { document.getElementById('fleetOverlay').classList.remove('open'); }
+
+  function openModal() {
+    editId = null;
+    document.getElementById('modalTitle').textContent = 'Add Airline';
+    ['fName','fIata','fCountry','fDesc'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('modalErr').classList.remove('show');
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function openEdit(id) {
+    const a = allAirlines.find(x=>x.id===id); if(!a) return;
+    editId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Airline';
+    document.getElementById('fName').value    = a.name;
+    document.getElementById('fIata').value    = a.iataCode;
+    document.getElementById('fCountry').value = a.country||'';
+    document.getElementById('fDesc').value    = a.description||'';
+    document.getElementById('modalErr').classList.remove('show');
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+  document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+  document.getElementById('fleetOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeFleet(); });
+
+  async function saveAirline() {
+    const label = document.getElementById('saveBtnLabel');
+    const spin  = document.getElementById('saveBtnSpinner');
+    const errEl = document.getElementById('modalErr');
+    errEl.classList.remove('show');
+    const name    = document.getElementById('fName').value.trim();
+    const iata    = document.getElementById('fIata').value.trim().toUpperCase();
+    const country = document.getElementById('fCountry').value.trim();
+    const desc    = document.getElementById('fDesc').value.trim();
+    if (!name||!iata) { errEl.textContent='Airline name and IATA code are required.'; errEl.classList.add('show'); return; }
+    if (iata.length < 2) { errEl.textContent='IATA code must be 2–3 characters.'; errEl.classList.add('show'); return; }
+    const body = { name, iataCode:iata, country:country||null, description:desc||null };
+    label.style.display='none'; spin.style.display='inline-block';
+    try {
+      const url    = editId ? `${API}/api/airlines/${editId}` : `${API}/api/airlines`;
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers:hdrs, body:JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent=data.message||data.error||'Save failed.'; errEl.classList.add('show'); return; }
+      closeModal(); await loadAirlines();
+    } catch(e) {
+      errEl.textContent='Server error.'; errEl.classList.add('show');
+    } finally {
+      label.style.display=''; spin.style.display='none';
+    }
+  }
+
+  async function deleteAirline(id, name) {
+    if (!confirm(`Delete airline "${name}"? All associated aircraft will also be deleted.`)) return;
+    try {
+      const res = await fetch(`${API}/api/airlines/${id}`, { method:'DELETE', headers:hdrs });
+      if (res.ok) await loadAirlines();
+      else { const d = await res.json(); alert(d.message||'Delete failed.'); }
+    } catch(e) { alert('Server error.'); }
+  }
+
+  function logout() { localStorage.clear(); window.location.href='/login'; }
+  loadAirlines();
+</script>
+</body>
+</html>

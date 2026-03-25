@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AeroManage – Maintenance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg-base:#070d1f; --bg-card:#0c1530; --border:rgba(255,255,255,0.07);
+      --accent:#4080ff; --accent2:#00c8ff; --success:#00d46a;
+      --warning:#ffb800; --danger:#ff4d4d; --text:#fff;
+      --text-muted:rgba(255,255,255,0.45); --sidebar-w:240px;
+    }
+    body { font-family:'Inter',sans-serif; background:var(--bg-base); color:var(--text); display:flex; min-height:100vh; }
+    /* ── sidebar (same as aircraft page) ── */
+    .sidebar { width:var(--sidebar-w); flex-shrink:0; background:var(--bg-card); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100; }
+    .sidebar-logo { padding:24px 20px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .logo-icon { width:40px; height:40px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+    .logo-text { font-size:1.1rem; font-weight:700; } .logo-sub { font-size:0.65rem; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; }
+    .sidebar-nav { flex:1; padding:16px 10px; overflow-y:auto; }
+    .nav-label { font-size:0.65rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); padding:12px 10px 6px; }
+    .nav-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--text-muted); font-size:0.88rem; font-weight:500; text-decoration:none; cursor:pointer; transition:background .15s,color .15s; margin-bottom:2px; }
+    .nav-item:hover { background:rgba(255,255,255,0.05); color:var(--text); }
+    .nav-item.active { background:rgba(64,128,255,0.15); color:var(--accent); }
+    .nav-item i { width:18px; text-align:center; }
+    .sidebar-footer { padding:16px 10px; border-top:1px solid var(--border); }
+    .user-pill { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,0.04); }
+    .user-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; flex-shrink:0; }
+    .user-name { font-size:0.82rem; font-weight:600; } .user-role { font-size:0.68rem; color:var(--text-muted); }
+    .logout-btn { margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem; padding:4px; border-radius:6px; }
+    .logout-btn:hover { color:var(--danger); }
+    /* ── main ── */
+    .main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
+    .topbar { background:var(--bg-card); border-bottom:1px solid var(--border); padding:16px 32px; display:flex; align-items:center; gap:16px; }
+    .topbar h1 { font-size:1.2rem; font-weight:700; flex:1; }
+    .badge-role { padding:4px 12px; border-radius:20px; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .badge-admin { background:rgba(255,64,64,0.15); color:#ff6464; border:1px solid rgba(255,64,64,0.3); }
+    .badge-technician { background:rgba(64,128,255,0.15); color:#6496ff; border:1px solid rgba(64,128,255,0.3); }
+    .badge-viewer { background:rgba(0,200,106,0.12); color:var(--success); border:1px solid rgba(0,200,106,0.3); }
+    .btn { padding:9px 18px; border-radius:10px; font-size:0.85rem; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; border:none; display:inline-flex; align-items:center; gap:8px; transition:opacity .2s,transform .15s; }
+    .btn:hover { opacity:.88; transform:translateY(-1px); }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),#6040ff); color:#fff; box-shadow:0 4px 16px rgba(64,128,255,.35); }
+    .btn-danger  { background:rgba(255,77,77,.15); color:var(--danger); border:1px solid rgba(255,77,77,.3); }
+    .btn-edit    { background:rgba(64,128,255,.12); color:var(--accent); border:1px solid rgba(64,128,255,.25); }
+    .btn-sm { padding:6px 12px; font-size:0.78rem; }
+    .content { padding:32px; flex:1; }
+    /* stats */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:28px; }
+    .stat-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:20px 22px; position:relative; overflow:hidden; }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:14px 14px 0 0; }
+    .stat-card.c1::before { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .stat-card.c2::before { background:linear-gradient(90deg,var(--warning),#ff8c00); }
+    .stat-card.c3::before { background:linear-gradient(90deg,var(--success),#00a855); }
+    .stat-card.c4::before { background:linear-gradient(90deg,#a040ff,#6040ff); }
+    .stat-label { font-size:0.72rem; font-weight:500; text-transform:uppercase; letter-spacing:.7px; color:var(--text-muted); margin-bottom:10px; }
+    .stat-value { font-size:2rem; font-weight:700; }
+    .stat-sub   { font-size:0.75rem; color:var(--text-muted); margin-top:4px; }
+    /* filter */
+    .filter-bar { display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap; }
+    .search-wrap { position:relative; flex:1; min-width:220px; }
+    .search-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:.88rem; }
+    .search-input { width:100%; padding:10px 14px 10px 40px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.88rem; font-family:'Inter',sans-serif; outline:none; }
+    .search-input:focus { border-color:var(--accent); }
+    .filter-select { padding:10px 14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.88rem; font-family:'Inter',sans-serif; outline:none; }
+    /* table */
+    .panel { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+    .panel-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .panel-title { font-size:.95rem; font-weight:600; }
+    table { width:100%; border-collapse:collapse; }
+    th { font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.7px; color:var(--text-muted); padding:12px 18px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+    td { padding:13px 18px; font-size:.84rem; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,.02); }
+    .type-badge { padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:600; background:rgba(64,128,255,.12); color:var(--accent); border:1px solid rgba(64,128,255,.25); }
+    .empty-state { padding:56px 24px; text-align:center; color:var(--text-muted); }
+    .empty-state i { font-size:2.5rem; margin-bottom:14px; display:block; opacity:.25; }
+    .desc-cell { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:.8rem; }
+    /* modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--bg-card); border:1px solid var(--border); border-radius:20px; width:min(600px,100%); padding:36px; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+    .modal-title { font-size:1.1rem; font-weight:700; }
+    .modal-close { background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+    .modal-close:hover { color:var(--text); }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-group.full { grid-column:1/-1; }
+    label { display:block; font-size:.75rem; font-weight:500; color:var(--text-muted); margin-bottom:7px; letter-spacing:.5px; text-transform:uppercase; }
+    .form-control { width:100%; padding:11px 14px; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.88rem; font-family:'Inter',sans-serif; outline:none; }
+    .form-control:focus { border-color:var(--accent); background:rgba(64,128,255,.06); }
+    textarea.form-control { resize:vertical; min-height:80px; }
+    .modal-footer { display:flex; gap:12px; justify-content:flex-end; margin-top:28px; padding-top:20px; border-top:1px solid var(--border); }
+    .alert { padding:11px 14px; border-radius:9px; font-size:.83rem; margin-bottom:16px; display:none; }
+    .alert.show { display:block; }
+    .alert-error   { background:rgba(255,70,70,.12); border:1px solid rgba(255,70,70,.28); color:#ff7070; }
+    .alert-success { background:rgba(0,200,100,.1);  border:1px solid rgba(0,200,100,.28); color:var(--success); }
+    .spinner-sm { width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .cost-cell { color:var(--warning); font-weight:600; }
+  </style>
+</head>
+<body>
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><i class="fa-solid fa-plane" style="color:#fff"></i></div>
+    <div><div class="logo-text">AeroManage</div><div class="logo-sub">Fleet System</div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+    <a class="nav-item" href="/aircraft"><i class="fa-solid fa-plane-departure"></i> Aircraft</a>
+    <a class="nav-item active" href="/maintenance"><i class="fa-solid fa-wrench"></i> Maintenance</a>
+    <a class="nav-item" href="/airlines"><i class="fa-solid fa-building"></i> Airlines</a>
+    <div class="nav-label" style="margin-top:8px">Account</div>
+    <div class="nav-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="avatarInitial">?</div>
+      <div><div class="user-name" id="sidebarUsername">…</div><div class="user-role" id="sidebarRole"></div></div>
+      <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-wrench" style="color:var(--warning);margin-right:10px"></i>Maintenance Log</h1>
+    <span class="badge-role" id="roleBadge"></span>
+    <button class="btn btn-primary" id="addBtn" onclick="openModal()"><i class="fa-solid fa-plus"></i> Log Maintenance</button>
+  </div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card c1">
+        <div class="stat-label">Total Records</div>
+        <div class="stat-value" id="sTotalRec">—</div>
+        <div class="stat-sub">All time</div>
+      </div>
+      <div class="stat-card c2">
+        <div class="stat-label">Total Cost</div>
+        <div class="stat-value" id="sTotalCost">—</div>
+        <div class="stat-sub">Across all records</div>
+      </div>
+      <div class="stat-card c3">
+        <div class="stat-label">Completed</div>
+        <div class="stat-value" id="sCompleted">—</div>
+        <div class="stat-sub">With completion date</div>
+      </div>
+      <div class="stat-card c4">
+        <div class="stat-label">Avg Cost</div>
+        <div class="stat-value" id="sAvgCost">—</div>
+        <div class="stat-sub">Per record</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search by type, description, aircraft…" oninput="filterTable()"/>
+      </div>
+      <select class="filter-select" id="typeFilter" onchange="filterTable()">
+        <option value="">All Types</option>
+        <option value="ROUTINE">Routine</option>
+        <option value="EMERGENCY">Emergency</option>
+        <option value="OVERHAUL">Overhaul</option>
+        <option value="INSPECTION">Inspection</option>
+        <option value="REPAIR">Repair</option>
+      </select>
+      <select class="filter-select" id="aircraftFilter" onchange="filterTable()">
+        <option value="">All Aircraft</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Maintenance Records <span id="countLabel" style="color:var(--text-muted);font-weight:400;font-size:.82rem"></span></span>
+      </div>
+      <div id="tableArea"><div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i>Loading records…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Log Maintenance</span>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="alert alert-error" id="modalErr"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Aircraft *</label>
+        <select class="form-control" id="fAircraft"></select>
+      </div>
+      <div class="form-group">
+        <label>Maintenance Type *</label>
+        <select class="form-control" id="fType">
+          <option value="ROUTINE">Routine</option>
+          <option value="EMERGENCY">Emergency</option>
+          <option value="OVERHAUL">Overhaul</option>
+          <option value="INSPECTION">Inspection</option>
+          <option value="REPAIR">Repair</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Maintenance Date</label>
+        <input type="datetime-local" class="form-control" id="fMaintDate"/>
+      </div>
+      <div class="form-group">
+        <label>Completion Date</label>
+        <input type="datetime-local" class="form-control" id="fCompDate"/>
+      </div>
+      <div class="form-group">
+        <label>Cost (₹)</label>
+        <input type="number" class="form-control" id="fCost" placeholder="0.00" min="0" step="0.01"/>
+      </div>
+      <div class="form-group">
+        <label>Technician (User ID)</label>
+        <select class="form-control" id="fTech">
+          <option value="">— None —</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Description * (10–500 chars)</label>
+        <textarea class="form-control" id="fDesc" placeholder="Describe the maintenance work performed…" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()" style="background:rgba(255,255,255,.06);color:var(--text)">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">
+        <span id="saveBtnLabel"><i class="fa-solid fa-floppy-disk"></i> Save</span>
+        <span id="saveBtnSpinner" class="spinner-sm" style="display:none"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8080';
+  const token = localStorage.getItem('token');
+  const roles = JSON.parse(localStorage.getItem('roles') || '[]');
+  const username = localStorage.getItem('username') || 'User';
+  if (!token) { window.location.href = '/login'; }
+
+  document.getElementById('sidebarUsername').textContent = username;
+  document.getElementById('avatarInitial').textContent   = username.charAt(0).toUpperCase();
+  const primaryRole = roles.find(r=>r.includes('ADMIN')) || roles.find(r=>r.includes('TECHNICIAN')) || 'ROLE_VIEWER';
+  const roleLabel = primaryRole.replace('ROLE_','');
+  document.getElementById('sidebarRole').textContent = roleLabel;
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = roleLabel; badge.className = 'badge-role badge-'+roleLabel.toLowerCase();
+
+  const canEdit = roles.some(r => r.includes('ADMIN') || r.includes('TECHNICIAN'));
+  const canDelete = roles.some(r => r.includes('ADMIN'));
+  if (!canEdit) document.getElementById('addBtn').style.display = 'none';
+
+  const hdrs = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+  let allRecords=[], allAircraft=[], allUsers=[], editId=null;
+
+  async function loadAll() {
+    try {
+      const [recRes, acRes] = await Promise.all([
+        fetch(`${API}/api/maintenance`, { headers: hdrs }),
+        fetch(`${API}/api/aircraft`,    { headers: hdrs })
+      ]);
+      if (recRes.status===401) { window.location.href='/login'; return; }
+      allRecords  = await recRes.json();
+      allAircraft = await acRes.json();
+
+      // Populate aircraft filter + modal dropdown
+      const acSel = document.getElementById('aircraftFilter');
+      const fAcSel = document.getElementById('fAircraft');
+      allAircraft.forEach(a => {
+        [acSel, fAcSel].forEach(sel => {
+          const o = document.createElement('option');
+          o.value = a.id; o.textContent = `${a.registrationNumber} – ${a.model}`;
+          sel.appendChild(o);
+        });
+      });
+
+      // Try loading users for technician select (admin/tech only)
+      if (canEdit) {
+        try {
+          const uRes = await fetch(`${API}/api/users`, { headers: hdrs });
+          if (uRes.ok) {
+            allUsers = await uRes.json();
+            const sel = document.getElementById('fTech');
+            allUsers.forEach(u => {
+              const o = document.createElement('option');
+              o.value = u.id; o.textContent = `${u.fullName || u.username} (${u.username})`;
+              sel.appendChild(o);
+            });
+          }
+        } catch(e) {}
+      }
+
+      renderStats();
+      renderTable();
+    } catch(e) {
+      document.getElementById('tableArea').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>Failed to load data. Is the server running?</div>';
+    }
+  }
+
+  function renderStats() {
+    const total = allRecords.length;
+    const totalCost = allRecords.reduce((s, r) => s + (r.cost||0), 0);
+    const completed = allRecords.filter(r => r.completionDate).length;
+    const avg = total ? totalCost/total : 0;
+    document.getElementById('sTotalRec').textContent  = total;
+    document.getElementById('sTotalCost').textContent = '₹' + totalCost.toLocaleString('en-IN', {maximumFractionDigits:0});
+    document.getElementById('sCompleted').textContent = completed;
+    document.getElementById('sAvgCost').textContent   = '₹' + Math.round(avg).toLocaleString('en-IN');
+  }
+
+  function filterTable() { renderTable(); }
+
+  function renderTable() {
+    const q    = document.getElementById('searchInput').value.toLowerCase();
+    const type = document.getElementById('typeFilter').value;
+    const acId = document.getElementById('aircraftFilter').value;
+
+    const filtered = allRecords.filter(r => {
+      const matchQ  = !q    || r.maintenanceType.toLowerCase().includes(q) || r.description.toLowerCase().includes(q) || (r.aircraft?.registrationNumber||'').toLowerCase().includes(q);
+      const matchTy = !type || r.maintenanceType === type;
+      const matchAc = !acId || String(r.aircraft?.id) === acId;
+      return matchQ && matchTy && matchAc;
+    });
+
+    document.getElementById('countLabel').textContent = `(${filtered.length})`;
+    if (!filtered.length) {
+      document.getElementById('tableArea').innerHTML = '<div class="empty-state"><i class="fa-solid fa-wrench"></i>No maintenance records found</div>';
+      return;
+    }
+
+    const rows = filtered.map(r => `
+      <tr>
+        <td><span class="type-badge">${r.maintenanceType}</span></td>
+        <td><strong>${r.aircraft?.registrationNumber||'—'}</strong><br><span style="color:var(--text-muted);font-size:.75rem">${r.aircraft?.model||''}</span></td>
+        <td class="desc-cell" title="${r.description}">${r.description}</td>
+        <td style="font-size:.8rem;color:var(--text-muted)">${r.maintenanceDate ? new Date(r.maintenanceDate).toLocaleDateString('en-IN') : '—'}</td>
+        <td style="font-size:.8rem;color:var(--text-muted)">${r.completionDate ? new Date(r.completionDate).toLocaleDateString('en-IN') : '<span style="color:var(--warning)">Ongoing</span>'}</td>
+        <td class="cost-cell">₹${r.cost != null ? r.cost.toLocaleString('en-IN') : '—'}</td>
+        <td style="font-size:.8rem;color:var(--text-muted)">${r.technician?.fullName||r.technician?.username||'—'}</td>
+        <td>
+          ${canEdit   ? `<button class="btn btn-edit btn-sm" onclick="openEdit(${r.id})"><i class="fa-solid fa-pen"></i></button>` : ''}
+          ${canDelete ? `<button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="deleteRecord(${r.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('tableArea').innerHTML = `
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Type</th><th>Aircraft</th><th>Description</th><th>Start Date</th><th>End Date</th><th>Cost</th><th>Technician</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
+  function openModal() {
+    editId = null;
+    document.getElementById('modalTitle').textContent = 'Log Maintenance';
+    ['fAircraft','fType','fMaintDate','fCompDate','fCost','fDesc','fTech'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el.tagName==='SELECT') { if (el.options.length) el.selectedIndex=0; }
+      else el.value='';
+    });
+    document.getElementById('fType').value = 'ROUTINE';
+    document.getElementById('modalErr').classList.remove('show');
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function openEdit(id) {
+    const r = allRecords.find(x=>x.id===id); if(!r) return;
+    editId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Maintenance Record';
+    document.getElementById('fAircraft').value  = r.aircraft?.id||'';
+    document.getElementById('fType').value      = r.maintenanceType;
+    document.getElementById('fCost').value      = r.cost||'';
+    document.getElementById('fDesc').value      = r.description;
+    document.getElementById('fTech').value      = r.technician?.id||'';
+    document.getElementById('fMaintDate').value = r.maintenanceDate ? r.maintenanceDate.substring(0,16) : '';
+    document.getElementById('fCompDate').value  = r.completionDate  ? r.completionDate.substring(0,16)  : '';
+    document.getElementById('modalErr').classList.remove('show');
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+  document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+  async function saveRecord() {
+    const label = document.getElementById('saveBtnLabel');
+    const spin  = document.getElementById('saveBtnSpinner');
+    const errEl = document.getElementById('modalErr');
+    errEl.classList.remove('show');
+    const aircraftId = document.getElementById('fAircraft').value;
+    const type  = document.getElementById('fType').value;
+    const desc  = document.getElementById('fDesc').value.trim();
+    const cost  = document.getElementById('fCost').value;
+    const mDate = document.getElementById('fMaintDate').value;
+    const cDate = document.getElementById('fCompDate').value;
+    const techId= document.getElementById('fTech').value;
+    if (!aircraftId) { errEl.textContent='Please select an aircraft.'; errEl.classList.add('show'); return; }
+    if (!desc || desc.length < 10) { errEl.textContent='Description must be at least 10 characters.'; errEl.classList.add('show'); return; }
+    const body = {
+      aircraft: { id: parseInt(aircraftId) },
+      maintenanceType: type,
+      description: desc,
+      cost: cost ? parseFloat(cost) : null,
+      maintenanceDate: mDate ? mDate+':00' : null,
+      completionDate:  cDate ? cDate+':00' : null
+    };
+    if (techId) body.technician = { id: parseInt(techId) };
+    label.style.display='none'; spin.style.display='inline-block';
+    try {
+      const url    = editId ? `${API}/api/maintenance/${editId}` : `${API}/api/maintenance`;
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: hdrs, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent=data.message||data.error||'Save failed.'; errEl.classList.add('show'); return; }
+      closeModal(); await loadAll();
+    } catch(e) {
+      errEl.textContent='Server error.'; errEl.classList.add('show');
+    } finally {
+      label.style.display=''; spin.style.display='none';
+    }
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm('Delete this maintenance record?')) return;
+    try {
+      const res = await fetch(`${API}/api/maintenance/${id}`, { method:'DELETE', headers:hdrs });
+      if (res.ok) await loadAll();
+      else alert('Delete failed.');
+    } catch(e) { alert('Server error.'); }
+  }
+
+  function logout() { localStorage.clear(); window.location.href='/login'; }
+  loadAll();
+</script>
+</body>
+</html>
